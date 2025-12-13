@@ -11,6 +11,7 @@ from tkinter import messagebox as mbox
 background_color_main='#262624'
 text_color="#E9E9E9"
 button_backg_color="#30302E"
+module_level={}
 
 class CycloMeter():
     def __init__(self, path):
@@ -19,6 +20,8 @@ class CycloMeter():
         self.msToKM('max speed')
         self.secsToHour('moving time')
         self.condition=None
+        self.sort_column = None
+        self.sort_ascending = True
 
     def pathAssign(self, path: str):
         path = pl.Path(path)
@@ -30,6 +33,17 @@ class CycloMeter():
         self.data = df.copy()   # keep copy
         return self
     
+    def sortValues(self, column):
+        
+        if self.sort_column==column:
+            self.sort_ascending=not self.sort_ascending
+        else:
+            self.sort_ascending=True
+        
+        self.sort_column=column
+        self.data = self.data.sort_values(by=column, ascending=self.sort_ascending)
+        
+    
     def setCondition(self, condition):
         if condition is None:
             self.condition=None
@@ -37,7 +51,7 @@ class CycloMeter():
             self.condition=condition
     
     def filterResults(self, column: str, operator: str, value: float):
-        if value=='':
+        if column=='':
             condition=None
             self.setCondition(condition)
             print('Filter is removed, insert table for default view.')
@@ -85,7 +99,7 @@ class CycloMeter():
             self.data[f"{column}/h"]=meter
 
 class TextRedirector():
-    def __init__(self, text_widget, delay=50):
+    def __init__(self, text_widget:tk.Text, delay=50):
         self.text_widget = text_widget
         self.delay = delay
         self.text = ""
@@ -116,51 +130,57 @@ class TextRedirector():
         pass
 
 def loadFile():
-    global cyclingObj
+    
     items=['activity id', 'activity date', 'moving time/h', 'distance', 'max heart rate', 'average heart rate', 'average speed kmh', 'max speed kmh', 'average watts', 'calories'] 
     
     path=filedialog.askopenfilename()
     if path:
         cyclingObj=CycloMeter(path)
         cyclingObj.data=cyclingObj.data[items]
+        module_level['obj']=cyclingObj
     else:
         pass
+    return cyclingObj
 
 def displayData(cyclingObj:CycloMeter):
     
     if cyclingObj.condition is not None: #If data is filtered, adjust the view.
-        display_data=cyclingObj.data[cyclingObj.condition]
+        display_data:pd.Dataframe=cyclingObj.data[cyclingObj.condition]
     else: #Unfiltered, raw data copy.
-        display_data=cyclingObj.data #iterate dataframe records and get Series
+        display_data:pd.Dataframe=cyclingObj.data #iterate dataframe records and get Series
     return display_data
 
 def updateStatusBar(status_bar:tk.Text):
     sys.stdout=TextRedirector(status_bar)
     
 
-def treeview_init(tree_view:Treeview, display_data, pandasRows):
+def treeview_init(tree_view:Treeview, display_data, pandasRows, cyclingObj:CycloMeter):
     '''Adjust, insert and clear treeview'''
     for t in tree_view.get_children(): tree_view.delete(t)
     for i in list(display_data.columns): 
-
-        tree_view.heading(i, text=i) #headings
+        
+        #A bit complex but briefly, when clicked calls on sortedValues then 
+        # insertTable again, sortedValues directly mutates the self.data then 
+        # insertedtable just normally calls on that object with mutated data etc
+        tree_view.heading(i, text=i, command=lambda col=i: (cyclingObj.sortValues(col), insertTable(tree_view, cyclingObj))) 
+        
         tree_view.column(i, width=180) #column sorting
     
     for index, value in pandasRows: #Iterating through pandasRows
+        print(value, index)
         raw_values=value.values #Series obj (bool T/F) to raw values
         tree_view.insert('','end',values=raw_values.tolist()) #''(start) to end insertion of columns not records
     print(f"Table insertion is complete!") #debugging needs removed on scaffolding
 
-
-def insertTable():
+def insertTable(tree_view, cyclingObj:CycloMeter):
 
     display_data=displayData(cyclingObj)
     tree_view['columns']=list(display_data.columns) #update tree_view obj
     tree_view.column('#0', width=0, stretch=False)
     pandasRows=display_data.iterrows() #iterate dataframe records and get Series
-    treeview_init(tree_view, display_data, pandasRows)
+    treeview_init(tree_view, display_data, pandasRows, cyclingObj)
 
-def retrieveEntry(colmn,op,setVal):
+def retrieveEntry(colmn,op,setVal, cyclingObj:CycloMeter):
     '''Return input of textBox'''
     colmn=colmn.get()
     operator=op.get()
@@ -168,7 +188,6 @@ def retrieveEntry(colmn,op,setVal):
     cyclingObj.filterResults(colmn,operator,val)
 
 def initButtons(window):
-    global colmn,op,setVal,frame_1,frame_2,frame_3, frame_4
     for i in range(4):
         if i==0:
             frame_1=tk.Frame(window)
@@ -184,8 +203,9 @@ def initButtons(window):
         elif i==3:
             frame_4=tk.Frame(window)
             
+    return colmn,op,setVal,frame_1,frame_2,frame_3, frame_4
 
-def packButtons(colmn,op,setVal,frame_1,frame_2,frame_3):
+def packButtons(colmn,op,setVal,frame_1,frame_2,frame_3, frame_4):
     
     
     for index, value in enumerate(["Column:", "Operation:", "Set Value:"]):
@@ -207,52 +227,83 @@ def packButtons(colmn,op,setVal,frame_1,frame_2,frame_3):
             frame_3.pack(side='top')
             setVal.pack(side=tk.RIGHT)
             valueLabel.pack(side=tk.LEFT)
+
     status_bar=tk.Text(frame_4, state='disabled')
     frame_4.pack(side='right', fill="x")
     status_bar.pack(fill="x") 
     updateStatusBar(status_bar) 
 
 def applyStyle(window:tk.Tk, style:ttk.Style):
-    window.option_add('*Button.background', button_backg_color)
-    window.option_add('*Button.foreground', text_color)
-    window.option_add('*Text.background', button_backg_color)
-    window.option_add('*Text.foreground', text_color)
     window.option_add('*Text.font', ('Segoe UI', 12))
-    window.option_add('*Label.background', button_backg_color)
-    window.option_add('*Label.foreground', text_color)
-    window.option_add('*Entry.background', button_backg_color)
-    window.option_add('*Entry.foreground', text_color)
     style.theme_use('clam')
-    style.configure("Treeview", background='#262624', foreground='#E9E9E9', fieldbackground='#262624',font=('Segoe UI', 12))
-    style.configure("Treeview.Heading", background='#262624', foreground='#E9E9E9', fieldbackground='#262624')
-    style.map("Treeview",
-    foreground=[('pressed', '#E9E9E9'), ('active', '#E9E9E9')],
-    background=[('selected', "#6791C1"),('pressed', '!disabled', "#6791C1"), ('active', '#262624')]
-    )
-    style.map("Treeview.Heading",
-    foreground=[('pressed', '#E9E9E9'), ('active', '#E9E9E9')],
-    background=[('pressed', '!disabled', "#6791C1"), ('active', '#262624')]
-    )
+    
+    layers=['*Button', '*Text', '*Label', '*Entry']
+    
+    for i in layers: 
+            window.option_add(f'{i}.foreground', text_color)
+            window.option_add(f'{i}.background', button_backg_color)
 
+#Dict styling applications. Clean, sweet, warm... :D
+    background='#262624'
+    foreground='#E9E9E9'
+    fieldbackground='#262624'
+    dictionary={
+        'Treeview':
+        {
+            'foreground':foreground,
+            'background':background,
+            'fieldbackground':fieldbackground,
+            'font':('Segoe UI', 12)
+        },
+        'Treeview.Heading':
+        {
+            'foreground':foreground,
+            'background':background,
+            'fieldbackground':fieldbackground
+        }
+    }
+    
+    for widget_names, properties in dictionary.items():
+            style.configure(widget_names,**properties) #KWARGS is where magic happens, makes key value pairs form variable. e.g. background='#262624'
+
+    background=('pressed', '!disabled', "#6791C1"), ('active', '#262624')
+    foreground=('pressed', '#E9E9E9'), ('active', '#E9E9E9')
+    dictionary={
+        'Treeview': 
+        {
+            'foreground':foreground,
+            'background':(('selected','#6793C1'),)+background
+        },
+        'Treeview.Heading':
+        {
+            'foreground':foreground,
+            'background':background,
+        }
+    }
+
+    for widget_name, properties in dictionary.items():
+        style.map(widget_name,**properties)
+    
 def programInitialize():
-    global tree_view
+    
     window=tk.Tk(className="cycloMeter")
     window.configure(background=background_color_main)
     window.geometry('1200x800')
     style=ttk.Style(master=window)
     applyStyle(window,style)
 
+    tree_view=Treeview(window, height=26)
     buttonLoadFile=tk.Button(window, text='Load CSV File', command=loadFile)
-    buttonInsertTable=tk.Button(window, text="Insert Table", command=insertTable)
-    initButtons(window)
+    
+    buttonInsertTable=tk.Button(window, text="Insert Table", command=lambda: insertTable(tree_view, module_level['obj']))
+    colmn, op, setVal, frame_1, frame_2, frame_3, frame_4=initButtons(window)
 
-    buttonFilter=tk.Button(window, text='Filter', command=lambda:retrieveEntry(colmn,op,setVal)) #text box
-    tree_view=Treeview(window, height=26) #CHANGE
+    buttonFilter=tk.Button(window, text='Filter', command=lambda:retrieveEntry(colmn,op,setVal, module_level['obj'])) #text box
+    
     
     for i in [tree_view,buttonLoadFile,buttonFilter,buttonInsertTable]: i.pack()
-    packButtons(colmn,op,setVal,frame_1,frame_2,frame_3)
+    packButtons(colmn,op,setVal,frame_1,frame_2,frame_3, frame_4)
     
-
     window.mainloop()
 
 if __name__ == "__main__":
@@ -263,10 +314,13 @@ if __name__ == "__main__":
         Loading columns, data works
         Filtering works
         Interface is a bit better
-        .exe file is init_ed
+        .exe file is ready
 
     
     TODO:
-        Display success or failure of filter on GUI
+        Imperative programming needs removal or improvement.
+        Global variables left and right, try to remove and implement better iFace
+        When clicked on column, sort it by highest.
+        Filterization is single dimensional, increase it for multiple columns and filterizations
     
     """
