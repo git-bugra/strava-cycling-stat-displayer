@@ -277,7 +277,7 @@ def packTextButtonHelper(window):
 def iconAdder(window:tk.Tk):
     '''Adds icon to tk object'''
     script_dir=pl.Path(__file__).parent
-    icon_path=script_dir / "ico" / "wheel.ico"
+    icon_path=script_dir / "ico" / "helmet.ico"
     window.iconbitmap(icon_path)
 
 def initEntryBoxes(window, label_names:list):
@@ -345,7 +345,7 @@ def initButtons(button_config):
 
 def configureMainFields():
     '''Initialize main fields like window, treeview and apply themes.'''
-    background_color_main,text_color,button_backg_color='#262624',"#E9E9E9","#302F2E"
+    background_color_main,text_color,button_backg_color='#262624',"#FFFFFF","#302F2E"
     window=tk.Tk(className=" Strava Stats Viewer")
     iconAdder(window)
     tree_frame=tk.Frame(window)
