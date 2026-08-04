@@ -39,7 +39,7 @@ Ensure you have Python 3.8 or higher installed on your system.
 
 1. Clone this repository to your local machine:
    ```bash
-   git clone [https://github.com/yourusername/strava-viewer.git](https://github.com/yourusername/strava-viewer.git)
+   git clone [https://github.com/bugra-ozer/strava-viewer.git](https://github.com/bugra-ozer/strava-viewer.git)
    cd strava-viewer
    
 2. Create and activate a virtual environment (recommended):
