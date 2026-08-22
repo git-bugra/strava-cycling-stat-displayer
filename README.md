@@ -35,6 +35,8 @@ The project utilizes a modular architecture, separating the graphical user inter
 
 ## Installation
 
+> Download [Installer](https://github.com/bugra-ozer/strava-viewer/releases) OR
+
 Ensure you have Python 3.8 or higher installed on your system. 
 
 1. Clone this repository to your local machine:
