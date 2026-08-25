@@ -60,12 +60,12 @@ Ensure you have Python 3.8 or higher installed on your system.
    ```bash
    python main.py
    
-    Click Load CSV File and select your exported Strava data file.
+   > load CSV file and select your exported Strava data file.
 
-    Click Insert Table to view your records.
+   > insert table to view your records.
     
-    Use the input fields at the top (column:, operator:, value:) and click Filter to refine your view.
+   > use the input fields at the top (column:, operator:, value:) and click Filter to refine your view.
     
-    Click the X button next to the filter controls to clear your search and restore the default table.
+   > use the X button next to the filter controls to clear your search and restore the default table.
 
 ![Strava app screenshot](imgs/app_ss.png)
